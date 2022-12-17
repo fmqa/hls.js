@@ -99,6 +99,7 @@ export function parseHeader(data: Uint8Array, offset: number) {
   ) {
     const paddingBit = (data[offset + 2] >> 1) & 1;
     const channelMode = data[offset + 3] >> 6;
+    const vbrHeaderOffset = channelMode !== 3 ? 32 + 4 : 17 + 4;
     const columnInBitrates =
       mpegVersion === 3 ? 3 - mpegLayer : mpegLayer === 3 ? 3 : 4;
     const bitRate =
@@ -131,6 +132,37 @@ export function parseHeader(data: Uint8Array, offset: number) {
       // Work around bug in Chromium by setting channelMode to dual-channel (01) instead of stereo (00)
       data[offset + 3] = data[offset + 3] | 0x80;
     }
+    
+    if (isVBRTag(data, vbrHeaderOffset)) {
+      let vbrOffset = vbrHeaderOffset + 4;
+      const vbrHeaderFlags = getInt32(data, vbrOffset);
+      vbrOffset += 4:
+      // FRAMES_FLAG
+      if (vbrHeaderFlags & 1 !== 0) {
+        vbrOffset += 4;
+      }
+      // BYTES_FLAG
+      if (vbrHeaderFlags & 2 !== 0) {
+        vbrOffset += 4;
+      }
+      // TOC_FLAG
+      if (vbrHeaderFlags & 4 !== 0) {
+        vbrOffset += 100;
+      }
+      // VBR_SCALE_FLAG
+      if (vbrHeaderFlags & 8 !== 0) {
+        vbrOffset += 4;
+      }
+      vbrOffset += 21;
+      let encoderDelay: number | null = (data[vbrOffset] << 4) + (data[vbrOffset + 1] >> 4);
+      let encoderPadding: number | null = ((data[vbrOffset + 1] & 15) << 8) + (data[vbrOffset + 2] & 255);
+      if (encoderDelay < 0 || encoderDelay > 3000) {
+        encoderDelay = null;
+      }
+      if (encoderPadding < 0 || encoderPadding > 3000) {
+        encoderPadding = null;
+      }
+    }
 
     return { sampleRate, channelCount, frameLength, samplesPerFrame };
   }
@@ -149,6 +181,40 @@ export function isHeader(data: Uint8Array, offset: number): boolean {
   // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
   // More info http://www.mp3-tech.org/programmer/frame_header.html
   return offset + 1 < data.length && isHeaderPattern(data, offset);
+}
+
+export function getInt32(data: Uint8Array, offset: number): number {
+  let x = data[offset + 0] & 0xff;
+  x <<= 8;
+  x |= data[offset + 1] & 0xff;
+  x <<= 8;
+  x |= data[offset + 2] & 0xff;
+  x <<= 8;
+  x |= data[offset+ 3] & 0xff;
+  return x;
+}
+
+export function isXingTag(data: Uint8Array, offset: number): boolean {
+  return (
+    data[offset] === 0x58 && 
+    data[offset + 1] === 0x69 && 
+    data[offset + 2] === 0x6e && 
+    data[offset + 3] === 0x67
+  );
+}
+
+
+export function isInfoTag(data: Uint8Array, offset: number): boolean {
+  return (
+    data[offset] === 0x49 && 
+    data[offset + 1] === 0x6e && 
+    data[offset + 2] === 0x66 && 
+    data[offset + 3] === 0x6f
+  );
+}
+
+export function isVBRTag(data: Uint8Array, offset: number): boolean {
+  return offset + 3 < data.length && (isXingTag(data, offset) || isInfoTag(data, offset));
 }
 
 export function canParse(data: Uint8Array, offset: number): boolean {
