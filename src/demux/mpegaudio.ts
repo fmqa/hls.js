@@ -133,6 +133,9 @@ export function parseHeader(data: Uint8Array, offset: number) {
       data[offset + 3] = data[offset + 3] | 0x80;
     }
     
+    let encoderDelay: number | null = null;
+    let encoderPadding: number | null = null;
+    
     if (isVBRTag(data, vbrHeaderOffset)) {
       let vbrOffset = vbrHeaderOffset + 4;
       const vbrHeaderFlags = getInt32(data, vbrOffset);
@@ -154,8 +157,8 @@ export function parseHeader(data: Uint8Array, offset: number) {
         vbrOffset += 4;
       }
       vbrOffset += 21;
-      let encoderDelay: number | null = (data[vbrOffset] << 4) + (data[vbrOffset + 1] >> 4);
-      let encoderPadding: number | null = ((data[vbrOffset + 1] & 15) << 8) + (data[vbrOffset + 2] & 255);
+      encoderDelay = (data[vbrOffset] << 4) + (data[vbrOffset + 1] >> 4);
+      encoderPadding = ((data[vbrOffset + 1] & 15) << 8) + (data[vbrOffset + 2] & 255);
       if (encoderDelay < 0 || encoderDelay > 3000) {
         encoderDelay = null;
       }
@@ -164,7 +167,7 @@ export function parseHeader(data: Uint8Array, offset: number) {
       }
     }
 
-    return { sampleRate, channelCount, frameLength, samplesPerFrame };
+    return { sampleRate, channelCount, frameLength, samplesPerFrame, encoderDelay, encoderPadding };
   }
 }
 
