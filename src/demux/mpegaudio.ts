@@ -136,21 +136,21 @@ export function parseHeader(data: Uint8Array, offset: number) {
     if (isVBRTag(data, vbrHeaderOffset)) {
       let vbrOffset = vbrHeaderOffset + 4;
       const vbrHeaderFlags = getInt32(data, vbrOffset);
-      vbrOffset += 4:
+      vbrOffset += 4;
       // FRAMES_FLAG
-      if (vbrHeaderFlags & 1 !== 0) {
+      if ((vbrHeaderFlags & 1) !== 0) {
         vbrOffset += 4;
       }
       // BYTES_FLAG
-      if (vbrHeaderFlags & 2 !== 0) {
+      if ((vbrHeaderFlags & 2) !== 0) {
         vbrOffset += 4;
       }
       // TOC_FLAG
-      if (vbrHeaderFlags & 4 !== 0) {
+      if ((vbrHeaderFlags & 4) !== 0) {
         vbrOffset += 100;
       }
       // VBR_SCALE_FLAG
-      if (vbrHeaderFlags & 8 !== 0) {
+      if ((vbrHeaderFlags & 8) !== 0) {
         vbrOffset += 4;
       }
       vbrOffset += 21;
