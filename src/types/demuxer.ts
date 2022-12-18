@@ -63,6 +63,8 @@ export interface DemuxedAudioTrack extends DemuxedTrack {
   channelCount?: number;
   manifestCodec?: string;
   samples: AudioSample[];
+  delay?: number;
+  padding?: number;
 }
 
 export interface DemuxedVideoTrack extends DemuxedTrack {
@@ -133,7 +135,7 @@ export type AudioSample = {
 };
 
 export type AudioFrame = {
-  sample: AudioSample;
+  sample?: AudioSample;
   length: number;
   missing: number;
 };
