@@ -75,7 +75,7 @@ export function appendFrame(
     track.samplerate = header.sampleRate;
     if (header.tag) {
       track.delay = header.encoderDelay / header.sampleRate;
-      track.padding = header.encoderPadding / header.sampleRate
+      track.padding = header.encoderPadding / header.sampleRate;
     } else {
       const frameDuration = (header.samplesPerFrame * 90000) / header.sampleRate;
       const stamp = pts + frameIndex * frameDuration;
