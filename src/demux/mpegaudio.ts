@@ -69,18 +69,23 @@ export function appendFrame(
 
   const header = parseHeader(data, offset);
   if (header && offset + header.frameLength <= data.length) {
-    const frameDuration = (header.samplesPerFrame * 90000) / header.sampleRate;
-    const stamp = pts + frameIndex * frameDuration;
-    const sample = {
-      unit: data.subarray(offset, offset + header.frameLength),
-      pts: stamp,
-      dts: stamp,
-    };
-
+    let sample: { unit: Uint8Array; pts: number; dts: number } | undefined;
     track.config = [];
     track.channelCount = header.channelCount;
     track.samplerate = header.sampleRate;
-    track.samples.push(sample);
+    if (header.tag) {
+      track.delay = header.encoderDelay / header.sampleRate;
+      track.padding = header.encoderPadding / header.sampleRate
+    } else {
+      const frameDuration = (header.samplesPerFrame * 90000) / header.sampleRate;
+      const stamp = pts + frameIndex * frameDuration;
+      sample = {
+        unit: data.subarray(offset, offset + header.frameLength),
+        pts: stamp,
+        dts: stamp,
+      };
+      track.samples.push(sample);
+    }
 
     return { sample, length: header.frameLength, missing: 0 };
   }
@@ -99,7 +104,7 @@ export function parseHeader(data: Uint8Array, offset: number) {
   ) {
     const paddingBit = (data[offset + 2] >> 1) & 1;
     const channelMode = data[offset + 3] >> 6;
-    const vbrHeaderOffset = channelMode !== 3 ? 32 + 4 : 17 + 4;
+    const vbrHeaderOffset = offset + (channelMode !== 3 ? 32 + 4 : 17 + 4);
     const columnInBitrates =
       mpegVersion === 3 ? 3 - mpegLayer : mpegLayer === 3 ? 3 : 4;
     const bitRate =
@@ -133,10 +138,12 @@ export function parseHeader(data: Uint8Array, offset: number) {
       data[offset + 3] = data[offset + 3] | 0x80;
     }
     
-    let encoderDelay: number | null = null;
-    let encoderPadding: number | null = null;
+    let encoderDelay = 0;
+    let encoderPadding = 0;
+    let tag = false;
     
     if (isVBRTag(data, vbrHeaderOffset)) {
+      tag = true;
       let vbrOffset = vbrHeaderOffset + 4;
       const vbrHeaderFlags = getInt32(data, vbrOffset);
       vbrOffset += 4;
@@ -160,14 +167,14 @@ export function parseHeader(data: Uint8Array, offset: number) {
       encoderDelay = (data[vbrOffset] << 4) + (data[vbrOffset + 1] >> 4);
       encoderPadding = ((data[vbrOffset + 1] & 15) << 8) + (data[vbrOffset + 2] & 255);
       if (encoderDelay < 0 || encoderDelay > 3000) {
-        encoderDelay = null;
+        encoderDelay = 0;
       }
       if (encoderPadding < 0 || encoderPadding > 3000) {
-        encoderPadding = null;
+        encoderPadding = 0;
       }
     }
 
-    return { sampleRate, channelCount, frameLength, samplesPerFrame, encoderDelay, encoderPadding };
+    return { sampleRate, channelCount, frameLength, samplesPerFrame, encoderDelay, encoderPadding, tag };
   }
 }
 
