@@ -103,8 +103,10 @@ class BaseAudioDemuxer implements Demuxer {
       if (this.canParse(data, offset)) {
         const frame = this.appendFrame(track, data, offset);
         if (frame) {
-          this.frameIndex++;
-          this.lastPTS = frame.sample.pts;
+          if (frame.sample) {
+            this.frameIndex++;
+            this.lastPTS = frame.sample.pts;
+          }
           offset += frame.length;
           lastDataIndex = offset;
         } else {
