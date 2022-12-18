@@ -835,20 +835,20 @@ class TSDemuxer implements Demuxer {
     if (aacOverFlow) {
       this.aacOverFlow = null;
       const frameMissingBytes = aacOverFlow.missing;
-      const sampleLength = aacOverFlow.sample.unit.byteLength;
+      const sampleLength = aacOverFlow.sample!.unit.byteLength;
       // logger.log(`AAC: append overflowing ${sampleLength} bytes to beginning of new PES`);
       if (frameMissingBytes === -1) {
         const tmp = new Uint8Array(sampleLength + data.byteLength);
-        tmp.set(aacOverFlow.sample.unit, 0);
+        tmp.set(aacOverFlow.sample!.unit, 0);
         tmp.set(data, sampleLength);
         data = tmp;
       } else {
         const frameOverflowBytes = sampleLength - frameMissingBytes;
-        aacOverFlow.sample.unit.set(
+        aacOverFlow.sample!.unit.set(
           data.subarray(0, frameMissingBytes),
           frameOverflowBytes
         );
-        track.samples.push(aacOverFlow.sample);
+        track.samples.push(aacOverFlow.sample!);
         startOffset = aacOverFlow.missing;
       }
     }
@@ -898,7 +898,7 @@ class TSDemuxer implements Demuxer {
       // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
       // first sample PTS should be equal to last sample PTS + frameDuration
       const frameDuration = ADTS.getFrameDuration(track.samplerate as number);
-      pts = aacOverFlow.sample.pts + frameDuration;
+      pts = aacOverFlow.sample!.pts + frameDuration;
     } else {
       logger.warn('[tsdemuxer]: AAC PES unknown PTS');
       return;
